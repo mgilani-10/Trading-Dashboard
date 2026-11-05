@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOVERS// Big Cap Terminal v2.6 - Day Trading Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+ :root {
+ --bg: #07090c;
+ --panel: #0e1217;
+ --panel-2: #0a0e12;
+ --border: #1f2630;
+ --border-soft: #151b22;
+ --text: #d8dee4;
+ --text-dim: #637182;
+ --text-mid: #9daab8;
+ --green: #00e676;
+ --green-dim: #0a2618;
+ --green-line: #14522f;
+ --red: #ff5252;
+ --red-dim: #2b1111;
+ --red-line: #6b2424;
+ --amber: #ffb300;
+ --amber-dim: #292008;
+ --blue: #40c4ff;
+ --mono: 'IBM Plex Mono', ui-monospace, monospace;
+ --sans: 'IBM Plex Sans', system-ui, sans-serif;
+ }
+ * { box-sizing: border-box; }
+ html, body { margin: 0; padding: 0; }
+ body {
+ background: var(--bg); color: var(--text); font-family: var(--mono);
+ min-height: 100vh; -webkit-font-smoothing: antialiased;
+ }
+ ::selection { background: var(--amber); color: #000; }
+
+ .topbar {
+ display: flex; align-items: center; justify-content: space-between;
+ padding: 12px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px;
+ background: var(--panel);
+ }
+ .brand { display: flex; align-items: baseline; gap: 10px; }
+ .brand .mark { font-weight: 700; font-size: 17px; letter-spacing: 0.5px; color: var(--text); }
+ .brand .mark span { color: var(--amber); }
+ .brand .sub { font-size: 10px; color: var(--text-dim); letter-spacing: 1.2px; text-transform: uppercase; background: var(--amber-dim); color: var(--amber); padding: 2px 6px; border-radius: 3px; }
+ 
+ .status-cluster { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--text-mid); flex-wrap: wrap; }
+ .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); display: inline-block; margin-right: 6px; }
+ .live-dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.5s infinite; }
+ @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+ .clock { font-variant-numeric: tabular-nums; color: var(--text); }
+
+ button {
+ font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+ background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+ padding: 7px 12px; border-radius: 4px; cursor: pointer; transition: all .15s;
+ }
+ button:hover { border-color: var(--text-mid); color: #fff; }
+ button:active { transform: scale(0.97); }
+ button.primary { background: var(--amber); color: #000; border-color: var(--amber); }
+ button.primary:hover { background: #ffd54f; }
+ button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+ .marquee-wrap {
+ border-bottom: 1px solid var(--border); background: var(--panel-2);
+ overflow: hidden; white-space: nowrap; position: relative; height: 32px; display: flex; align-items: center;
+ }
+ .marquee-wrap.empty { display: none; }
+ .marquee-track { display: inline-flex; gap: 36px; padding-left: 100%; animation: scroll 35s linear infinite; }
+ .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+ @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+ .tick-item { font-size: 11.5px; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+ .tick-item.up { color: var(--green); }
+ .tick-item.down { color: var(--red); }
+ .tick-flag { font-size: 8.5px; background: var(--amber); color: #000; padding: 1px 4px; border-radius: 2px; font-weight: 700; }
+
+ .setup {
+ max-width: 520px; margin: 60px auto; padding: 32px; background: var(--panel);
+ border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+ }
+ .setup h1 { font-family: var(--sans); font-size: 20px; margin: 0 0 8px; color: #fff; }
+ .setup p { color: var(--text-mid); font-size: 13px; line-height: 1.6; margin: 0 0 20px; }
+ .setup input {
+ width: 100%; font-family: var(--mono); font-size: 13px; background: var(--panel-2);
+ border: 1px solid var(--border); color: var(--text); padding: 11px 14px; border-radius: 4px; margin-bottom: 14px;
+ }
+ .setup input:focus { outline: none; border-color: var(--amber); }
+ .setup .steps { font-size: 12px; color: var(--text-dim); line-height: 1.8; margin-bottom: 20px; }
+ .setup .steps b { color: var(--text-mid); }
+
+ .controls {
+ display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+ padding: 12px 20px; border-bottom: 1px solid var(--border-soft); background: var(--panel);
+ }
+ .chip-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+ .chip {
+ font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 16px;
+ border: 1px solid var(--border); background: transparent; color: var(--text-mid); cursor: pointer; letter-spacing: 0.3px;
+ }
+ .chip.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+ 
+ /* Autocomplete Search Bar */
+ .search-container { position: relative; display: inline-block; margin-left: 10px; }
+ .search-input {
+ font-family: var(--mono); font-size: 11px; background: var(--panel-2); color: var(--text);
+ border: 1px solid var(--border); padding: 6px 12px; border-radius: 14px; width: 220px; outline: none;
+ }
+ .search-input:focus { border-color: var(--amber); }
+ .search-dropdown {
+ position: absolute; top: 100%; left: 0; right: 0; background: var(--panel);
+ border: 1px solid var(--border); border-radius: 4px; z-index: 1000; max-height: 260px; overflow-y: auto;
+ display: none; margin-top: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+ }
+ .search-dropdown.active { display: block; }
+ .search-result-item {
+ padding: 10px 12px; font-size: 11.5px; cursor: pointer; border-bottom: 1px solid var(--border-soft);
+ display: flex; justify-content: space-between; align-items: center; gap: 8px;
+ }
+ .search-result-item:hover { background: var(--panel-2); color: var(--amber); }
+ .search-result-sym { font-weight: 700; color: #fff; background: var(--border); padding: 2px 6px; border-radius: 3px; }
+ .search-result-name { color: var(--text-dim); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+
+ .meta-right { display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--text-dim); flex-wrap: wrap; }
+ select {
+ font-family: var(--mono); font-size: 11px; background: var(--panel-2); color: var(--text-mid);
+ border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; outline: none; cursor: pointer;
+ }
+ select:focus { border-color: var(--amber); }
+
+ .dashboard-layout {
+ display: grid; grid-template-columns: 1fr 340px; gap: 1px; background: var(--border-soft);
+ }
+ @media (max-width: 1200px) {
+ .dashboard-layout { grid-template-columns: 1fr; }
+ }
+
+ .main-terminal { background: var(--bg); display: flex; flex-direction: column; }
+ .news-sidebar { background: var(--panel); display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+
+ .section-label {
+ font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase;
+ color: var(--text-dim); padding: 14px 20px 8px; display: flex; justify-content: space-between; align-items: center;
+ }
+
+ .board { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-soft); }
+ @media (max-width: 820px) { .board { grid-template-columns: 1fr; } }
+
+ .col { background: var(--bg); display: flex; flex-direction: column; min-height: 140px; }
+ .col-head {
+ padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+ border-bottom: 1px solid var(--border-soft); background: var(--panel-2);
+ }
+ .col-head h2 { font-family: var(--sans); font-size: 11.5px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; margin: 0; }
+ .col-head.gainers h2 { color: var(--green); }
+ .col-head.losers h2 { color: var(--red); }
+ .col-count { font-size: 11px; color: var(--text-dim); }
+
+ .row {
+ display: flex; align-items: center; justify-content: space-between;
+ padding: 10px 16px; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; transition: background 0.1s;
+ }
+ .row:hover { background: var(--panel); }
+ .row.flag.up { border-left: 2px solid var(--green); }
+ .row.flag.down { border-left: 2px solid var(--red); }
+ .sym-group { display: flex; align-items: center; gap: 8px; }
+ .sym { font-weight: 700; color: var(--text); min-width: 45px; display: flex; align-items: center; gap: 6px; }
+ .badge5 { font-size: 8.5px; background: var(--amber); color: #000; padding: 1px 4px; border-radius: 2px; font-weight: 700; vertical-align: middle; }
+ .remove-sym { font-size: 10px; color: var(--text-dim); cursor: pointer; padding: 2px 5px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border); }
+ .remove-sym:hover { color: var(--red); border-color: var(--red); }
+ 
+ .price-box { text-align: right; }
+ .price { color: var(--text); min-width: 64px; font-variant-numeric: tabular-nums; font-weight: 500; }
+ .sub-price { font-size: 10px; color: var(--text-dim); }
+ .pct { font-weight: 700; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+ .pct.up { color: var(--green); }
+ .pct.down { color: var(--red); }
+ 
+ .row-left { display: flex; align-items: center; gap: 12px; }
+ .row-right { display: flex; gap: 16px; align-items: center; }
+
+ /* Heatmap Grid View */
+ .heatmap { padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: calc(100vh - 160px); overflow-y: auto; }
+ .tile {
+ background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+ display: flex; flex-direction: column; gap: 4px; position: relative; transition: transform 0.1s;
+ }
+ .tile:hover { transform: translateY(-2px); border-color: var(--text-mid); }
+ .t-sym { font-weight: 700; font-size: 13px; color: #fff; }
+ .t-pct { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+ .t-pct.up { color: var(--green); }
+ .t-pct.down { color: var(--red); }
+ .t-price { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+ .t-flag { position: absolute; top: 10px; right: 10px; font-size: 8px; background: var(--amber); color: #000; padding: 1px 3px; border-radius: 2px; font-weight: 700; }
+
+ /* 52W Range meter with actual dollar values */
+ .range-wrap { width: 110px; display: flex; flex-direction: column; gap: 3px; }
+ .range-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; position: relative; }
+ .range-fill { height: 100%; background: var(--blue); border-radius: 2px; }
+ .range-text { font-size: 9px; color: var(--text-dim); display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+
+ /* News Sidebar */
+ .news-feed { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: calc(100vh - 160px); }
+ .news-item {
+ padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 4px;
+ transition: border-color 0.15s; text-decoration: none; display: block;
+ }
+ .news-item:hover { border-color: var(--amber); }
+ .news-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+ .news-sym { color: var(--amber); font-weight: 700; }
+ .news-title { font-size: 12px; color: var(--text); line-height: 1.4; font-family: var(--sans); }
+
+ .footer {
+ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+ padding: 12px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); background: var(--panel);
+ }
+
+ .banner {
+ margin: 14px 20px 0; padding: 10px 14px; border-radius: 4px; font-size: 12px;
+ border: 1px solid var(--red-line); background: var(--red-dim); color: #ffb3b3;
+ }
+
+ .modal-backdrop {
+ position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+ z-index: 50; padding: 20px; backdrop-filter: blur(2px);
+ }
+ .modal {
+ background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 24px;
+ max-width: 540px; width: 100%; max-height: 85vh; overflow: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+ }
+ .modal h3 { font-family: var(--sans); font-size: 16px; margin: 0 0 8px; color: #fff; }
+ .modal p { font-size: 12px; color: var(--text-mid); line-height: 1.6; margin: 0 0 12px; }
+ .modal textarea {
+ width: 100%; min-height: 140px; font-family: var(--mono); font-size: 12px; background: var(--panel-2);
+ border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 4px; resize: vertical;
+ }
+ .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+ .skel { color: var(--text-dim); padding: 20px; font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+(function(){
+ const QUOTE_ENDPOINT = 'https://finnhub.io/api/v1/quote';
+ const METRIC_ENDPOINT = 'https://finnhub.io/api/v1/stock/metric';
+ const NEWS_ENDPOINT = 'https://finnhub.io/api/v1/news';
+ const SEARCH_ENDPOINT = 'https://finnhub.io/api/v1/search';
+ 
+ const KEY_STORAGE = 'fh-api-key-v2.6';
+ const PREFS_STORAGE = 'fh-prefs-v2.6';
+ const WATCHLIST_STORAGE = 'fh-watchlist-v2.6';
+
+ const DEFAULT_WATCHLIST = [
+  'AAPL','MSFT','GOOGL','AMZN','NVDA','META','TSLA','AVGO','LLY','JPM',
+  'V','UNH','XOM','MA','PG','HD','JNJ','COST','ABBV','MRK',
+  'BAC','CVX','KO','PEP','ADBE','CRM','TMO','MCD','CSCO','ABT',
+  'ACN','LIN','TXN','WFC','DIS','VZ','CMCSA','NFLX','INTC','AMD',
+  'QCOM','PM','NKE','UPS','RTX','HON','LOW','SBUX','IBM','GS',
+  'SCHD','NOW','ORCL','CMG','SOUN','PLTR','SMCI','COIN','HOOD','RIVN'
+ ];
+
+ let state = {
+  apiKey: null,
+  watchlist: DEFAULT_WATCHLIST.slice(),
+  quotes: {}, 
+  news: [],
+  searchResults: [],
+  loading: false,
+  error: null,
+  lastUpdated: null,
+  filterFive: false,
+  autoRefreshMin: 1,
+  showHelpModal: false,
+  showWatchlistModal: false,
+  viewMode: 'board' 
+ };
+
+ let autoTimer = null;
+ let clockTimer = null;
+ let ws = null;
+ let searchTimeout = null;
+
+ async function loadPersisted(){
+  try{
+   const k = await window.storage.get(KEY_STORAGE, false);
+   if(k) state.apiKey = k.value;
+  }catch(e){
+   const localKey = localStorage.getItem(KEY_STORAGE);
+   if(localKey) state.apiKey = localKey;
+  }
+
+  try{
+   const w = await window.storage.get(WATCHLIST_STORAGE, false);
+   if(w) {
+    state.watchlist = JSON.parse(w.value);
+   } else {
+    const localWatchlist = localStorage.getItem(WATCHLIST_STORAGE);
+    if(localWatchlist) state.watchlist = JSON.parse(localWatchlist);
+   }
+  }catch(e){}
+
+  try{
+   const p = await window.storage.get(PREFS_STORAGE, false);
+   if(p){
+    const parsed = JSON.parse(p.value);
+    state.filterFive = parsed.filterFive ?? false;
+    state.autoRefreshMin = parsed.autoRefreshMin ?? 1;
+   }
+  }catch(e){}
+ }
+
+ async function savePrefs(){
+  try{
+   await window.storage.set(PREFS_STORAGE, JSON.stringify({
+    filterFive: state.filterFive, autoRefreshMin: state.autoRefreshMin
+   }), false);
+  }catch(e){}
+ }
+
+ async function saveWatchlist(){
+  try{ 
+   await window.storage.set(WATCHLIST_STORAGE, JSON.stringify(state.watchlist), false); 
+  }catch(e){}
+  localStorage.setItem(WATCHLIST_STORAGE, JSON.stringify(state.watchlist));
+ }
+
+ async function saveKey(k){
+  try{ await window.storage.set(KEY_STORAGE, k, false); }catch(e){}
+  localStorage.setItem(KEY_STORAGE, k);
+ }
+
+ async function clearKey(){
+  state.apiKey = null;
+  state.quotes = {};
+  try{ await window.storage.delete(KEY_STORAGE, false); }catch(e){}
+  localStorage.removeItem(KEY_STORAGE);
+  if(ws) { ws.close(); ws = null; }
+  render();
+ }
+
+ function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+ async function fetchAllData(){
+  if(!state.apiKey || state.loading) return;
+  state.loading = true;
+  state.error = null;
+  render();
+
+  const results = {};
+  const batchSize = 10;
+  for(let i=0; i<state.watchlist.length; i+=batchSize){
+   const chunk = state.watchlist.slice(i, i+batchSize);
+   const promises = chunk.map(async sym => {
+    try {
+     const res = await fetch(`${QUOTE_ENDPOINT}?symbol=${encodeURIComponent(sym)}&token=${state.apiKey}`);
+     if(!res.ok) throw new Error(`HTTP ${res.status}`);
+     const data = await res.json();
+     if(data.c !== undefined && data.c !== 0){
+      let high52 = null, low52 = null;
+      try {
+       const mRes = await fetch(`${METRIC_ENDPOINT}?symbol=${encodeURIComponent(sym)}&metric=all&token=${state.apiKey}`);
+       if(mRes.ok) {
+        const mData = await mRes.json();
+        high52 = mData.metric?.['52WeekHigh'] || null;
+        low52 = mData.metric?.['52WeekLow'] || null;
+       }
+      } catch(err){}
+
+      results[sym] = {
+       c: data.c,
+       d: data.d,
+       dp: data.dp,
+       h: data.h,
+       l: data.l,
+       o: data.o,
+       pc: data.pc,
+       high52: high52,
+       low52: low52
+      };
+     }
+    } catch(e){}
+   });
+   await Promise.all(promises);
+   if(i + batchSize < state.watchlist.length) await delay(100);
+  }
+
+  try {
+   const nRes = await fetch(`${NEWS_ENDPOINT}?category=general&token=${state.apiKey}`);
+   if(nRes.ok){
+    const nData = await nRes.json();
+    state.news = (nData || []).slice(0, 15);
+   }
+  } catch(e){}
+
+  state.quotes = results;
+  state.loading = false;
+  state.lastUpdated = new Date();
+  render();
+  setupWebSocket();
+ }
+
+ function setupWebSocket(){
+  if(!state.apiKey) return;
+  if(ws) return; 
+  try {
+   ws = new WebSocket(`wss://ws.finnhub.io?token=${state.apiKey}`);
+   ws.onopen = () => {
+    state.watchlist.forEach(sym => {
+     ws.send(JSON.stringify({'type':'subscribe', 'symbol': sym}));
+    });
+   };
+   ws.onmessage = (event) => {
+    try {
+     const parsed = JSON.parse(event.data);
+     if(parsed.type === 'trade' && parsed.data){
+      parsed.data.forEach(t => {
+       if(state.quotes[t.s]){
+        const q = state.quotes[t.s];
+        q.c = t.p;
+        q.d = t.p - q.pc;
+        q.dp = q.pc ? (q.d / q.pc) * 100 : 0;
+        updateRowLive(t.s, q);
+       }
+      });
+     }
+    } catch(e){}
+   };
+   ws.onerror = () => { ws = null; };
+   ws.onclose = () => { ws = null; };
+  } catch(e){ ws = null; }
+ }
+
+ async function searchSymbols(query){
+  if(!query || query.length < 1 || !state.apiKey) {
+   state.searchResults = [];
+   renderSearchDropdown();
+   return;
+  }
+  try {
+   const res = await fetch(`${SEARCH_ENDPOINT}?q=${encodeURIComponent(query)}&token=${state.apiKey}`);
+   if(res.ok){
+    const data = await res.json();
+    // Finnhub search returns { count: N, result: [{description: "...", displaySymbol: "...", symbol: "...", type: "..."}, ...] }
+    const items = data.result || [];
+    state.searchResults = items.filter(r => !r.symbol.includes('.')).slice(0, 10);
+    renderSearchDropdown();
+   }
+  } catch(e){
+   state.searchResults = [];
+   renderSearchDropdown();
+  }
+ }
+
+ function renderSearchDropdown(){
+  const dropdown = document.getElementById('search-dropdown');
+  if(!dropdown) return;
+  if(state.searchResults.length === 0){
+   dropdown.classList.remove('active');
+   dropdown.innerHTML = '<div class="search-result-item" style="color:var(--text-dim); justify-content:center;">No matching symbols found</div>';
+   dropdown.classList.add('active');
+   return;
+  }
+  dropdown.innerHTML = state.searchResults.map(r => `
+   <div class="search-result-item" data-sym="${r.symbol}">
+    <span class="search-result-sym">${r.symbol}</span>
+    <span class="search-result-name" title="${r.description}">${r.description || r.displaySymbol}</span>
+   </div>
+  `).join('');
+  dropdown.classList.add('active');
+
+  dropdown.querySelectorAll('.search-result-item').forEach(el => {
+   el.onmousedown = (e) => {
+    e.preventDefault();
+    const sym = el.getAttribute('data-sym');
+    if(sym && !state.watchlist.includes(sym)){
+     state.watchlist.push(sym);
+     saveWatchlist();
+     if(ws) { ws.close(); ws = null; }
+     fetchAllData();
+    }
+    const input = document.getElementById('global-search-input');
+    if(input) input.value = '';
+    state.searchResults = [];
+    dropdown.classList.remove('active');
+   };
+  });
+ }
+
+ function updateRowLive(sym, q){
+  const el = document.getElementById(`row-${sym}`);
+  if(el){
+   const priceEl = el.querySelector('.price');
+   const pctEl = el.querySelector('.pct');
+   if(priceEl) priceEl.textContent = '$' + q.c.toFixed(2);
+   if(pctEl){
+    pctEl.textContent = (q.dp >= 0 ? '+' : '') + q.dp.toFixed(2) + '%';
+    pctEl.className = 'pct ' + (q.dp >= 0 ? 'up' : 'down');
+   }
+  }
+ }
+
+ function setupAutoRefresh(){
+  if(autoTimer) clearInterval(autoTimer);
+  if(state.autoRefreshMin > 0){
+   autoTimer = setInterval(() => {
+    if(state.apiKey && !state.loading) fetchAllData();
+   }, state.autoRefreshMin * 60 * 1000);
+  }
+ }
+
+ function startClock(){
+  if(clockTimer) clearInterval(clockTimer);
+  clockTimer = setInterval(() => {
+   const clk = document.getElementById('live-clock');
+   if(clk) clk.textContent = new Date().toLocaleTimeString();
+  }, 1000);
+ }
+
+ function render(){
+  const app = document.getElementById('app');
+  if(!state.apiKey){
+   app.innerHTML = `
+    <div class="setup">
+     <h1>MOVERS// Day Trading Terminal</h1>
+     <p>Enter your <b>Finnhub API Key</b> to initialize live streaming quotes, 52-week ranges, and catalyst news feeds.</p>
+     <input type="password" id="api-key-input" placeholder="Enter Finnhub API Key (e.g. c...)" />
+     <div class="steps">
+      <b>Quick Setup Guide:</b><br/>
+      1. Create a free account on <a href="https://finnhub.io" target="_blank" style="color:var(--amber)">Finnhub.io</a>.<br/>
+      2. Copy your free API Key from the dashboard.<br/>
+      3. Paste it above and launch terminal.
+     </div>
+     <button class="primary" id="launch-btn" style="width:100%; padding:11px;">Launch Terminal</button>
+    </div>
+   `;
+   document.getElementById('launch-btn').onclick = () => {
+    const val = document.getElementById('api-key-input').value.trim();
+    if(val){
+     state.apiKey = val;
+     saveKey(val);
+     fetchAllData();
+     setupAutoRefresh();
+    }
+   };
+   return;
+  }
+
+  const quotesArr = Object.entries(state.quotes).map(([sym, q]) => ({ sym, ...q }));
+  quotesArr.sort((a, b) => (b.dp || 0) - (a.dp || 0));
+
+  let gainers = quotesArr.filter(q => (q.dp || 0) > 0);
+  let losers = quotesArr.filter(q => (q.dp || 0) < 0).reverse();
+
+  if(state.filterFive){
+   gainers = gainers.slice(0, 5);
+   losers = losers.slice(0, 5);
+  }
+
+  app.innerHTML = `
+   <div class="topbar">
+    <div class="brand">
+     <div class="mark">MOVERS<span>//</span>TERMINAL</div>
+     <div class="sub">Day Trading Pro</div>
+    </div>
+    <div class="status-cluster">
+     <div><span class="live-dot ${ws ? 'on' : ''}"></span>WS: ${ws ? 'Connected' : 'Polling'}</div>
+     <div class="clock" id="live-clock">${new Date().toLocaleTimeString()}</div>
+     <button id="edit-watchlist-modal-btn">Watchlist (${state.watchlist.length})</button>
+     <button id="help-btn">Help</button>
+     <button id="settings-btn" title="Reset API Key">API Key</button>
+    </div>
+   </div>
+
+   <!-- Ticker Marquee Tape -->
+   <div class="marquee-wrap ${quotesArr.length === 0 ? 'empty' : ''}">
+    <div class="marquee-track">
+     ${quotesArr.map(q => `
+      <div class="tick-item ${q.dp >= 0 ? 'up' : 'down'}">
+       <b>${q.sym}</b> $${(q.c||0).toFixed(2)} <span>${q.dp >= 0 ? '+' : ''}${(q.dp||0).toFixed(2)}%</span>
+       ${Math.abs(q.dp || 0) >= 5 ? '<span class="tick-flag">HOT</span>' : ''}
+      </div>
+     `).join('')}
+    </div>
+   </div>
+
+   ${state.error ? `<div class="banner">Error: ${state.error}</div>` : ''}
+
+   <!-- Controls & Global Autocomplete Search Bar -->
+   <div class="controls">
+    <div class="chip-group">
+     <button class="chip ${!state.filterFive ? 'active' : ''}" id="filter-all-btn">All Movers</button>
+     <button class="chip ${state.filterFive ? 'active' : ''}" id="filter-5-btn">Top / Bottom 5</button>
+     <button class="chip ${state.viewMode === 'board' ? 'active' : ''}" id="view-board-btn">Split Board</button>
+     <button class="chip ${state.viewMode === 'heatmap' ? 'active' : ''}" id="view-heatmap-btn">Heatmap View</button>
+     
+     <div class="search-container">
+      <input type="text" id="global-search-input" class="search-input" placeholder="🔍 Search Ticker / Company (e.g. MU)..." autocomplete="off" />
+      <div class="search-dropdown" id="search-dropdown"></div>
+     </div>
+    </div>
+    <div class="meta-right">
+     <div>Refresh: 
+      <select id="refresh-select">
+       <option value="0" ${state.autoRefreshMin===0?'selected':''}>Manual</option>
+       <option value="1" ${state.autoRefreshMin===1?'selected':''}>1m</option>
+       <option value="5" ${state.autoRefreshMin===5?'selected':''}>5m</option>
+      </select>
+     </div>
+     <div>Updated: ${state.lastUpdated ? state.lastUpdated.toLocaleTimeString() : 'Never'}</div>
+     <button class="primary" id="refresh-now-btn" ${state.loading ? 'disabled' : ''}>${state.loading ? 'Fetching...' : 'Force Refresh'}</button>
+    </div>
+   </div>
+
+   <!-- Main Dashboard & News Layout -->
+   <div class="dashboard-layout">
+    <div class="main-terminal">
+     ${state.loading && Object.keys(state.quotes).length === 0 ? `
+      <div class="skel">Fetching live market quotes & 52-week metrics...</div>
+     ` : state.viewMode === 'board' ? `
+      <div class="board">
+       <div class="col">
+        <div class="col-head gainers">
+         <h2>Top Gainers</h2>
+         <span class="col-count">${gainers.length} symbols</span>
+        </div>
+        <div class="col-body">
+         ${gainers.length === 0 ? '<div class="skel">No positive movers</div>' : gainers.map(q => renderRow(q)).join('')}
+        </div>
+       </div>
+       <div class="col">
+        <div class="col-head losers">
+         <h2>Top Losers</h2>
+         <span class="col-count">${losers.length} symbols</span>
+        </div>
+        <div class="col-body">
+         ${losers.length === 0 ? '<div class="skel">No negative movers</div>' : losers.map(q => renderRow(q)).join('')}
+        </div>
+       </div>
+      </div>
+     ` : `
+      <div class="section-label"><span>Market Heatmap (${quotesArr.length} Symbols)</span></div>
+      <div class="heatmap">
+       ${quotesArr.map(q => {
+        const isUp = (q.dp || 0) >= 0;
+        const bg = isUp ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 82, 82, 0.15)';
+        const border = isUp ? 'var(--green-line)' : 'var(--red-line)';
+        return `
+         <div class="tile" style="background:${bg}; border-color:${border};">
+          <div class="t-sym">${q.sym}</div>
+          <div class="t-pct ${isUp?'up':'down'}">${isUp?'+':''}${(q.dp||0).toFixed(2)}%</div>
+          <div class="t-price">$${(q.c||0).toFixed(2)}</div>
+          ${Math.abs(q.dp||0) >= 5 ? '<span class="t-flag">5%</span>' : ''}
+         </div>
+        `;
+       }).join('')}
+      </div>
+     `}
+    </div>
+
+    <!-- Live News Catalyst Sidebar -->
+    <div class="news-sidebar">
+     <div class="section-label">
+      <span>Live Catalyst Wire</span>
+      <span style="font-size:10px; color:var(--amber);">RSS / API</span>
+     </div>
+     <div class="news-feed">
+      ${state.news.length === 0 ? '<div class="skel">Loading financial news...</div>' : state.news.map(n => `
+       <a href="${n.url || '#'}" target="_blank" class="news-item">
+        <div class="news-meta">
+         <span class="news-sym">${n.source || 'WIRE'}</span>
+         <span>${new Date((n.datetime || Date.now()/1000) * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+        <div class="news-title">${n.headline}</div>
+       </a>
+      `).join('')}
+     </div>
+    </div>
+   </div>
+
+   <div class="footer">
+    <div>MOVERS// Terminal - Built for Day Traders & High-Frequency Watchlists</div>
+    <div>Data via Finnhub API & WebSocket Stream</div>
+   </div>
+
+   <!-- Edit Watchlist Modal -->
+   ${state.showWatchlistModal ? `
+    <div class="modal-backdrop" id="watchlist-modal-backdrop">
+     <div class="modal">
+      <h3>Manage Watchlist Symbols</h3>
+      <p>Enter stock symbols separated by commas, spaces, or newlines (e.g. AAPL, TSLA, NVDA):</p>
+      <textarea id="watchlist-textarea">${state.watchlist.join(', ')}</textarea>
+      <div class="modal-actions">
+       <button id="cancel-watchlist-modal-btn">Cancel</button>
+       <button class="primary" id="save-watchlist-modal-btn">Save & Reload</button>
+      </div>
+     </div>
+    </div>
+   ` : ''}
+
+   <!-- Help Modal -->
+   ${state.showHelpModal ? `
+    <div class="modal-backdrop" id="help-modal-backdrop">
+     <div class="modal">
+      <h3>Terminal Navigation & Guide</h3>
+      <p>Welcome to the <b>MOVERS// Day Trading Terminal</b>. Here is how to navigate and manage your watchlists:</p>
+      <ul>
+       <li><b>Watchlist Button:</b> Click <b>Watchlist (...)</b> in the top right to open the bulk editor modal and paste or edit your complete watchlist.</li>
+       <li><b>Global Search & Lookup:</b> Type any company name or ticker symbol (e.g. <code>Apple</code> or <code>MU</code>) into the search bar. Click any match from the dropdown to instantly add it! If you press <b>Enter</b> on a typed ticker, it will also be instantly added to your watchlist.</li>
+       <li><b>Remove Tickers:</b> Click the small <b>[×]</b> next to any symbol on the board to remove it from your personal view.</li>
+       <li><b>Split Board vs. Heatmap:</b> Use control chips to toggle between side-by-side Gainers/Losers boards or a full visual Grid Heatmap.</li>
+       <li><b>52-Week Range Bar:</b> The blue meter shows where the stock trades relative to its yearly low and high, with exact dollar amounts shown underneath.</li>
+      </ul>
+      <div class="modal-actions">
+       <button class="primary" id="close-help-btn">Got it</button>
+      </div>
+     </div>
+    </div>
+   ` : ''}
+  `;
+
+  bindEvents();
+ }
+
+ function renderRow(q){
+  const isUp = (q.dp || 0) >= 0;
+  let rangePct = 50;
+  if(q.high52 && q.low52 && q.high52 > q.low52){
+   rangePct = Math.max(0, Math.min(100, ((q.c - q.low52) / (q.high52 - q.low52)) * 100));
+  }
+
+  const lowStr = q.low52 ? `$${q.low52.toFixed(2)}` : 'N/A';
+  const highStr = q.high52 ? `$${q.high52.toFixed(2)}` : 'N/A';
+
+  return `
+   <div class="row ${Math.abs(q.dp || 0) >= 5 ? (isUp ? 'flag up' : 'flag down') : ''}" id="row-${q.sym}">
+    <div class="row-left">
+     <div class="sym-group">
+      <span class="sym">${q.sym}</span>
+      <span class="remove-sym" data-sym="${q.sym}" title="Remove from watchlist">×</span>
+     </div>
+     ${Math.abs(q.dp || 0) >= 5 ? '<span class="badge5">5%</span>' : ''}
+     <div class="range-wrap" title="52W Range: Low ${lowStr} - High ${highStr}">
+      <div class="range-bar"><div class="range-fill" style="width: ${rangePct}%;"></div></div>
+      <div class="range-text"><span>${lowStr}</span><span>${highStr}</span></div>
+     </div>
+    </div>
+    <div class="row-right">
+     <div class="price-box">
+      <div class="price">$${(q.c || 0).toFixed(2)}</div>
+      <div class="sub-price">O: $${(q.o || 0).toFixed(2)}</div>
+     </div>
+     <div class="pct ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${(q.dp || 0).toFixed(2)}%</div>
+    </div>
+   </div>
+  `;
+ }
+
+ function bindEvents(){
+  const fAll = document.getElementById('filter-all-btn');
+  const f5 = document.getElementById('filter-5-btn');
+  if(fAll) fAll.onclick = () => { state.filterFive = false; savePrefs(); render(); };
+  if(f5) f5.onclick = () => { state.filterFive = true; savePrefs(); render(); };
+
+  const vBoard = document.getElementById('view-board-btn');
+  const vHeat = document.getElementById('view-heatmap-btn');
+  if(vBoard) vBoard.onclick = () => { state.viewMode = 'board'; render(); };
+  if(vHeat) vHeat.onclick = () => { state.viewMode = 'heatmap'; render(); };
+
+  const searchInput = document.getElementById('global-search-input');
+  if(searchInput){
+   searchInput.oninput = (e) => {
+    const val = e.target.value.trim();
+    if(searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => searchSymbols(val), 200);
+   };
+   searchInput.onfocus = (e) => {
+    const val = e.target.value.trim();
+    if(val.length >= 1) searchSymbols(val);
+   };
+   searchInput.onkeydown = (e) => {
+    if(e.key === 'Enter'){
+     e.preventDefault();
+     const val = e.target.value.trim().toUpperCase();
+     if(val){
+      if(!state.watchlist.includes(val)){
+       state.watchlist.push(val);
+       saveWatchlist();
+       if(ws) { ws.close(); ws = null; }
+       fetchAllData();
+      }
+      e.target.value = '';
+      const dropdown = document.getElementById('search-dropdown');
+      if(dropdown) dropdown.classList.remove('active');
+     }
+    }
+   };
+  }
+
+  // Bind Watchlist Modal open button
+  const editWatchlistModalBtn = document.getElementById('edit-watchlist-modal-btn');
+  if(editWatchlistModalBtn) editWatchlistModalBtn.onclick = () => {
+   state.showWatchlistModal = true;
+   render();
+  };
+
+  const cancelWatchlistModal = document.getElementById('cancel-watchlist-modal-btn');
+  if(cancelWatchlistModal) cancelWatchlistModal.onclick = () => {
+   state.showWatchlistModal = false;
+   render();
+  };
+
+  const saveWatchlistModal = document.getElementById('save-watchlist-modal-btn');
+  if(saveWatchlistModal) saveWatchlistModal.onclick = () => {
+   const text = document.getElementById('watchlist-textarea').value;
+   const parsed = text.split(/[\s,;\n]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+   if(parsed.length > 0){
+    state.watchlist = Array.from(new Set(parsed));
+    saveWatchlist();
+    state.showWatchlistModal = false;
+    if(ws) { ws.close(); ws = null; }
+    fetchAllData();
+   } else {
+    alert('Please enter at least one valid symbol.');
+   }
+  };
+
+  const watchlistBackdrop = document.getElementById('watchlist-modal-backdrop');
+  if(watchlistBackdrop) watchlistBackdrop.onclick = (e) => {
+   if(e.target === watchlistBackdrop){ state.showWatchlistModal = false; render(); }
+  };
+
+  // Bind remove ticker buttons
+  document.querySelectorAll('.remove-sym').forEach(btn => {
+   btn.onclick = (e) => {
+    const symToRemove = e.target.getAttribute('data-sym');
+    state.watchlist = state.watchlist.filter(s => s !== symToRemove);
+    saveWatchlist();
+    delete state.quotes[symToRemove];
+    if(ws) { ws.close(); ws = null; }
+    render();
+    fetchAllData();
+   };
+  });
+
+  const refSel = document.getElementById('refresh-select');
+  if(refSel) refSel.onchange = (e) => {
+   state.autoRefreshMin = parseInt(e.target.value);
+   savePrefs();
+   setupAutoRefresh();
+  };
+
+  const refBtn = document.getElementById('refresh-now-btn');
+  if(refBtn) refBtn.onclick = () => fetchAllData();
+
+  const helpBtn = document.getElementById('help-btn');
+  if(helpBtn) helpBtn.onclick = () => { state.showHelpModal = true; render(); };
+
+  const closeHelp = document.getElementById('close-help-btn');
+  if(closeHelp) closeHelp.onclick = () => { state.showHelpModal = false; render(); };
+
+  const settingsBtn = document.getElementById('settings-btn');
+  if(settingsBtn) settingsBtn.onclick = () => {
+   if(confirm('Reset API key and clear session?')) clearKey();
+  };
+
+  const helpBackdrop = document.getElementById('help-modal-backdrop');
+  if(helpBackdrop) helpBackdrop.onclick = (e) => {
+   if(e.target === helpBackdrop){ state.showHelpModal = false; render(); }
+  };
+
+  // Close search dropdown if clicking outside
+  document.onclick = (e) => {
+   if(!e.target.closest('.search-container')){
+    const dd = document.getElementById('search-dropdown');
+    if(dd) dd.classList.remove('active');
+   }
+  };
+ }
+
+ loadPersisted().then(() => {
+  render();
+  startClock();
+  if(state.apiKey){
+   fetchAllData();
+   setupAutoRefresh();
+  }
+ });
+
+})();
+</script>
+</body>
+</html>
